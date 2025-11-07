@@ -1,0 +1,60 @@
+version: "2"
+run:
+  timeout: 5m
+linters:
+  enable:
+    - bodyclose
+    - gocritic
+    - gocyclo
+    - gosec
+    - misspell
+    - noctx
+    - revive
+    - staticcheck
+    - whitespace
+    - wsl_v5
+  exclusions:
+    generated: lax
+    rules:
+      - path: (.+)\.go$
+        text: Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
+      - path: (.+)\.go$
+        text: func name will be used as test\.Test.* by other packages, and that stutters; consider calling this
+      - path: (.+)\.go$
+        text: (possible misuse of unsafe.Pointer|should have signature)
+      - path: (.+)\.go$
+        text: ineffective break statement. Did you mean to break out of the outer loop
+      - path: (.+)\.go$
+        text: Use of unsafe calls should be audited
+      - path: (.+)\.go$
+        text: Subprocess launch(ed with variable|ing should be audited)
+      - path: (.+)\.go$
+        text: (G104|G307)
+      - path: (.+)\.go$
+        text: (Expect directory permissions to be 0750 or less|Expect file permissions to be 0600 or less)
+      - path: (.+)\.go$
+        text: Potential file inclusion via variable
+      - path: (.+)\.go$
+        text: return statements should not be cuddled if block has more than two lines
+    paths:
+      - models
+  settings:
+    wsl_v5:
+      default: all
+      allow-first-in-block: true
+      allow-whole-block: false
+      disable:
+      - assign
+      - return
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - models

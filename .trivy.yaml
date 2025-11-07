@@ -1,0 +1,19 @@
+format: table
+exit-code: 1
+severity:
+  - HIGH
+  - CRITICAL
+ignorefile: .trivyignore
+scan:
+  skip-dirs:
+    - files
+    - node_modules
+    - vendor
+    - dist
+    - build
+    - .git
+    - .github
+    - .vscode
+    - .idea
+    - .DS_Store
+    - .devcontainer

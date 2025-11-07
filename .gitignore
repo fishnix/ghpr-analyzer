@@ -1,0 +1,6 @@
+notes.md
+config.*yaml
+.devcontainer/.env.secret
+.vscode
+output-example.json
+example*.json

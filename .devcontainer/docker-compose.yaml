@@ -1,0 +1,65 @@
+networks:
+  CHANGEME:
+
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: sleep infinity
+    env_file:
+      - .env
+      # - .env.secret
+    volumes:
+      - ..:/workspace:cached
+    networks:
+      - CHANGEME
+#     depends_on:
+#       - postgres
+#       - dynamodb
+#       - mock-oidc
+
+#   postgres:
+#     image: postgres:17-alpine
+#     restart: unless-stopped
+#     volumes:
+#       - psql-data:/tmp/dev/pgsql/data
+#     env_file:
+#         - .env
+#     expose:
+#       - "5432"
+#     ports:
+#       - "5432:5432"
+#     networks:
+#       - CHANGEME
+
+#   mock-oidc:
+#     image: ghcr.io/fishnix/mock-oidc:latest
+#     restart: unless-stopped
+#     env_file:
+#         - .env
+#     expose:
+#       - "3080"
+#     ports:
+#       - "3080:3080"
+#     volumes:
+#       - ./users:/app/users:cached
+#       - ./apps:/app/apps:cached
+#     networks:
+#       - CHANGEME
+
+#   dynamodb:
+#     command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+#     image: amazon/dynamodb-local:latest
+#     ports:
+#       - "9888:8000"
+#     volumes:
+#       - dynamodb-data:/home/dynamodblocal/data
+#     user: root
+#     working_dir: /home/dynamodblocal
+#     networks:
+#       - CHANGEME
+
+# volumes:
+#   psql-data:
+#   dynamodb-data:
