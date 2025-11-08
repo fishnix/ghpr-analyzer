@@ -7,4 +7,4 @@ example*.json
 out*/
 cache.db
 cache/
-analyzer
+/analyzer
