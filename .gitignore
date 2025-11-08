@@ -6,5 +6,5 @@ output-example.json
 example*.json
 out*/
 cache.db
-cache/
-analyzer
+/cache/
+/analyzer
