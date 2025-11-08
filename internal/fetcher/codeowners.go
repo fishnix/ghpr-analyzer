@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/fishnix/ghpr-analyzer/internal/ghclient"
 	"github.com/google/go-github/v62/github"
-	"github.com/fishnix/golang-template/internal/ghclient"
 	"go.uber.org/zap"
 )
 
@@ -170,7 +170,7 @@ func (file *CODEOWNERSFile) FindOwners(filePath string) []string {
 	filePath = filepath.Clean(filePath)
 
 	var matches []struct {
-		owners  []string
+		owners      []string
 		specificity int
 	}
 
@@ -180,10 +180,10 @@ func (file *CODEOWNERSFile) FindOwners(filePath string) []string {
 			// Calculate specificity (longer pattern = more specific)
 			specificity := len(rule.Pattern)
 			matches = append(matches, struct {
-				owners  []string
+				owners      []string
 				specificity int
 			}{
-				owners:  rule.Owners,
+				owners:      rule.Owners,
 				specificity: specificity,
 			})
 		}
@@ -324,4 +324,3 @@ func matchRegexLike(pattern, filePath string) bool {
 	matched, err := regexp.MatchString("^"+pattern+"$", filePath)
 	return err == nil && matched
 }
-

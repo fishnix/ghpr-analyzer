@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fishnix/ghpr-analyzer/internal/ghclient"
 	"github.com/google/go-github/v62/github"
-	"github.com/fishnix/golang-template/internal/ghclient"
 	"go.uber.org/zap"
 )
 

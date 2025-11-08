@@ -2,7 +2,7 @@
 package main
 
 import (
-	"github.com/fishnix/golang-template/cmd"
+	"github.com/fishnix/ghpr-analyzer/cmd"
 )
 
 // //go:embed static

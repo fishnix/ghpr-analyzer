@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fishnix/ghpr-analyzer/internal/analyzer"
+	"github.com/fishnix/ghpr-analyzer/internal/cache"
+	"github.com/fishnix/ghpr-analyzer/internal/config"
+	"github.com/fishnix/ghpr-analyzer/internal/ghclient"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/fishnix/golang-template/internal/analyzer"
-	"github.com/fishnix/golang-template/internal/cache"
-	"github.com/fishnix/golang-template/internal/config"
-	"github.com/fishnix/golang-template/internal/ghclient"
 	"go.uber.org/zap"
 )
 

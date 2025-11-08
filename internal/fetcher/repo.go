@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fishnix/ghpr-analyzer/internal/ghclient"
 	"github.com/google/go-github/v62/github"
-	"github.com/fishnix/golang-template/internal/ghclient"
 	"go.uber.org/zap"
 )
 
 // RepoEnumerator enumerates repositories in a GitHub organization
 type RepoEnumerator struct {
-	client    *github.Client
-	ghClient  *ghclient.Client
-	org       string
-	logger    *zap.Logger
+	client   *github.Client
+	ghClient *ghclient.Client
+	org      string
+	logger   *zap.Logger
 }
 
 // NewRepoEnumerator creates a new repo enumerator
@@ -83,4 +83,3 @@ func (r *RepoEnumerator) EnumerateRepos(ctx context.Context) ([]*github.Reposito
 
 	return allRepos, nil
 }
-

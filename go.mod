@@ -1,4 +1,4 @@
-module github.com/fishnix/golang-template
+module github.com/fishnix/ghpr-analyzer
 
 go 1.25.3
 
