@@ -1,0 +1,37 @@
+github:
+  org: "my-org"
+  token_env_var: "GITHUB_TOKEN"
+time_window:
+  since: "2025-10-01T00:00:00Z"
+  until: "2025-10-31T23:59:59Z"
+filters:
+  exclude_authors:
+    - "bot-user"
+    - "do-not-count"
+  exclude_title_prefixes:
+    - "WIP:"
+    - "DO NOT MERGE"
+attribution:
+  mode: "multi"   # "multi" | "primary" | "first-owner-only"
+cache:
+  backend: "sqlite"
+  sqlite_path: "./cache.db"
+  json_dir: "./cache"
+  ttl_minutes: 1440
+rate_limiter:
+  type: "token-bucket"
+  qps: 2
+  burst: 20
+  retry:
+    max_attempts: 5
+    base_delay_ms: 500
+  threshold: 3000      # Sleep when rate limit remaining reaches this threshold (0 = disabled)
+  sleep_minutes: 60    # Minutes to sleep when threshold is reached
+output:
+  format: "json"
+  output_dir: "./out"
+logging:
+  level: "info"
+concurrency:
+  repo_workers: 8
+

@@ -1,309 +1,410 @@
-# Go Application Template
+# GitHub PR Analysis Tool
 
-I end up creating the same boilerplate over and over, so I created this template for Go applications using Cobra CLI framework. This template provides a solid foundation with best practices, tooling, and development container support.
+A local, idiomatic Go application that programmatically analyzes **closed pull requests** across a GitHub organization, grouping counts by CODEOWNERS teams (and individuals) and by repository, with configurable filters, local caching, and respectful rate-limiting.
 
 ## Features
 
-- 🚀 **Cobra CLI Framework** - Structured command-line interface
-- 📝 **Zap Logging** - High-performance structured logging
-- 🔍 **Linting** - golangci-lint with comprehensive rules
-- 🔐 **Security Scanning** - Trivy for vulnerability detection
-- 🐳 **DevContainer Ready** - Easy development environment setup
-- 🛠️ **Makefile** - Common development tasks
-- ✅ **Testing Support** - Unit test framework with coverage
+- ✅ **Repository Enumeration**: Lists all repositories in a GitHub organization
+- ✅ **PR Analysis**: Analyzes closed PRs within a configurable time window
+- ✅ **Filtering**: Exclude PRs by author or title prefix
+- ✅ **Rate Limiting**: Respectful GitHub API rate limiting with token bucket algorithm
+- ✅ **Concurrent Processing**: Parallel repository processing with configurable worker pool
+- ✅ **JSON Output**: Machine-friendly JSON output with aggregated metrics
+- ✅ **Logging**: Configurable logging levels (debug, info, warn, error)
 
-## Quick Start
+## Installation
 
 ### Prerequisites
 
-- Go 1.25.0 or later
-- Make
-- Docker (for devcontainer or containerized builds)
+- Go 1.25.3 or later
+- A GitHub personal access token (PAT) with appropriate scopes
 
-### Local Development
-
-1. **Clone and customize the template:**
-   ```bash
-   git clone <your-repo-url>
-   cd <your-project>
-   ```
-
-2. **Update the module name:**
-   ```bash
-   # Update go.mod with your module path
-   go mod edit -module github.com/your-org/your-project
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   make vendor
-   ```
-
-4. **Run the application:**
-   ```bash
-   make serve
-   # or
-   go run main.go serve
-   ```
-
-### Development Container (Recommended)
-
-The easiest way to get started is using VS Code's DevContainer feature. This ensures a consistent development environment for all team members.
-
-#### Option 1: Generate DevContainer using VS Code
-
-1. **Open the project in VS Code**
-2. **Press `F1` or `Cmd/Ctrl + Shift + P`**
-3. **Select "Dev Containers: Add Dev Container Configuration Files..."**
-4. **Choose "Go" from the list of container definitions**
-5. **Select the appropriate Go version (1.25.0 or later)**
-6. **VS Code will generate `.devcontainer/devcontainer.json`**
-
-#### Option 2: Create DevContainer Manually
-
-Create a `.devcontainer/devcontainer.json` file:
-
-```json
-{
-  "name": "Go Development",
-  "image": "golang:1.25",
-  "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers/features/git:1": {}
-  },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "golang.go",
-        "ms-vscode.makefile-tools"
-      ],
-      "settings": {
-        "go.toolsManagement.checkForUpdates": "local",
-        "go.useLanguageServer": true
-      }
-    }
-  },
-  "postCreateCommand": "go mod download",
-  "remoteUser": "vscode"
-}
-```
-
-#### Option 3: Use Docker Compose (for services)
-
-If your application needs additional services (databases, etc.), create `.devcontainer/docker-compose.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build:
-      context: ..
-      dockerfile: .devcontainer/Dockerfile
-    volumes:
-      - ..:/workspace:cached
-    command: sleep infinity
-    network_mode: service:db
-
-  db:
-    image: postgres:latest
-    restart: unless-stopped
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: appdb
-
-volumes:
-  postgres-data:
-```
-
-Then update `.devcontainer/devcontainer.json` to use the compose file:
-
-```json
-{
-  "name": "Go Development",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "app",
-  "workspaceFolder": "/workspace",
-  "customizations": {
-    "vscode": {
-      "extensions": ["golang.go"]
-    }
-  }
-}
-```
-
-#### Opening the DevContainer
-
-1. **Open the project in VS Code**
-2. **Press `F1` or `Cmd/Ctrl + Shift + P`**
-3. **Select "Dev Containers: Reopen in Container"**
-4. VS Code will build and start the container
-5. Wait for the container to initialize (first time may take a few minutes)
-
-## Project Structure
-
-```
-.
-├── cmd/              # Command implementations
-│   ├── root.go      # Root command and CLI setup
-│   └── serve.go     # Serve command implementation
-├── main.go          # Application entry point
-├── go.mod           # Go module dependencies
-├── Makefile         # Common development tasks
-├── .golangci.yaml   # Linter configuration
-├── .trivy.yaml      # Security scanner configuration
-└── .devcontainer/   # DevContainer configuration (create this)
-    └── devcontainer.json
-```
-
-## Available Make Targets
+### Build from Source
 
 ```bash
-make help          # Show available targets (if defined)
-make vendor        # Download and tidy dependencies
-make serve         # Run the application in development mode
-make test          # Run all tests (lint + unit tests + security checks)
-make unit-test     # Run unit tests with coverage
-make lint          # Run golangci-lint
-make vulncheck     # Run vulnerability checks (govulncheck + trivy)
-make build         # Build the application and Docker image
-make clean         # Clean build artifacts and test cache
+git clone <repository-url>
+cd <repository-directory>
+go build -o analyzer ./main.go
 ```
 
-## Customization Guide
+## GitHub Token Setup
 
-### 1. Update Application Name
+### Creating a Personal Access Token (PAT)
 
-Replace `CHANGEME` throughout the codebase:
+1. **Navigate to GitHub Settings**
+   - Go to [GitHub Settings](https://github.com/settings/profile)
+   - Click on **Developer settings** in the left sidebar
+   - Click on **Personal access tokens** → **Tokens (classic)**
 
-- `cmd/root.go`: Update `appName` and `appDescription` constants
-- `Makefile`: Update `CHANGEME` in build targets
-- `go.mod`: Update module path
+2. **Generate New Token**
+   - Click **Generate new token** → **Generate new token (classic)**
+   - Give your token a descriptive name (e.g., "PR Analyzer")
+   - Set an expiration date (recommended: 90 days or custom)
 
-### 2. Add Your Commands
+3. **Select Required Scopes**
 
-Create new command files in `cmd/` directory:
+   The following scopes are required for the application to function:
 
-```go
-// cmd/yourcommand.go
-package cmd
+   - ✅ **`repo`** (Full control of private repositories)
+     - Required to read repository metadata, pull requests, and CODEOWNERS files
+     - Includes access to:
+       - `repo:status` - Read/write repository status
+       - `repo_deployment` - Access deployment status
+       - `public_repo` - Access public repositories
+       - `repo:invite` - Access repository invitations
+       - `security_events` - Read and write security events
 
-var yourCmd = &cobra.Command{
-    Use:   "yourcommand",
-    Short: "Description of your command",
-    Run: func(cmd *cobra.Command, args []string) {
-        // Your command logic
-    },
+   **Note**: For public repositories only, you can use a more limited scope:
+   - ✅ **`public_repo`** - Access public repositories (read-only access to public repos)
+
+   **For organizations**, you may also need:
+   - ✅ **`read:org`** - Read org and team membership, read org projects (if analyzing private org repos)
+
+4. **Generate and Copy Token**
+   - Click **Generate token** at the bottom
+   - **IMPORTANT**: Copy the token immediately - you won't be able to see it again!
+   - Store it securely (use a password manager)
+
+### Setting the Token
+
+Set the token as an environment variable:
+
+```bash
+# Linux/macOS
+export GITHUB_TOKEN="your_token_here"
+
+# Windows (PowerShell)
+$env:GITHUB_TOKEN="your_token_here"
+
+# Windows (CMD)
+set GITHUB_TOKEN=your_token_here
+```
+
+Alternatively, you can specify a custom environment variable name in your config file:
+
+```yaml
+github:
+  token_env_var: "MY_CUSTOM_TOKEN_VAR"
+```
+
+Then set that variable:
+```bash
+export MY_CUSTOM_TOKEN_VAR="your_token_here"
+```
+
+### Token Security Best Practices
+
+- 🔒 **Never commit tokens to version control**
+- 🔒 **Use environment variables or secret management tools**
+- 🔒 **Rotate tokens regularly**
+- 🔒 **Use the minimum required scopes**
+- 🔒 **Set appropriate expiration dates**
+- 🔒 **Revoke tokens when no longer needed**
+
+## Configuration
+
+The application supports configuration via YAML file and CLI flags. CLI flags override config file values.
+
+### Configuration File
+
+Create a `config.yaml` file (see `config.yaml.example` for a template):
+
+```yaml
+github:
+  org: "my-org"
+  token_env_var: "GITHUB_TOKEN"
+time_window:
+  since: "2025-10-01T00:00:00Z"
+  until: "2025-10-31T23:59:59Z"
+filters:
+  exclude_authors:
+    - "bot-user"
+    - "do-not-count"
+  exclude_title_prefixes:
+    - "WIP:"
+    - "DO NOT MERGE"
+attribution:
+  mode: "multi"   # "multi" | "primary" | "first-owner-only"
+cache:
+  backend: "sqlite"
+  sqlite_path: "./cache.db"
+  json_dir: "./cache"
+  ttl_minutes: 1440
+rate_limiter:
+  type: "token-bucket"
+  qps: 2
+  burst: 20
+  retry:
+    max_attempts: 5
+    base_delay_ms: 500
+  threshold: 3000      # Sleep when rate limit remaining reaches this threshold (0 = disabled)
+  sleep_minutes: 60    # Minutes to sleep when threshold is reached
+output:
+  format: "json"
+  output_dir: "./out"
+logging:
+  level: "info"
+concurrency:
+  repo_workers: 8
+```
+
+### Configuration Options
+
+| Section | Option | Description | Default |
+|---------|--------|-------------|---------|
+| `github` | `org` | GitHub organization name | Required |
+| `github` | `token_env_var` | Environment variable name for token | `GITHUB_TOKEN` |
+| `time_window` | `since` | Start time (RFC3339 format) | Required |
+| `time_window` | `until` | End time (RFC3339 format) | Required |
+| `filters` | `exclude_authors` | List of author usernames to exclude | `[]` |
+| `filters` | `exclude_title_prefixes` | List of title prefixes to exclude | `[]` |
+| `attribution` | `mode` | Attribution mode | `multi` |
+| `rate_limiter` | `qps` | Queries per second | `2` |
+| `rate_limiter` | `burst` | Burst size | `20` |
+| `rate_limiter` | `threshold` | Rate limit threshold to trigger sleep (0 = disabled) | `0` |
+| `rate_limiter` | `sleep_minutes` | Minutes to sleep when threshold is reached | `60` |
+| `output` | `format` | Output format (`json`, `csv`) | `json` |
+| `output` | `output_dir` | Output directory | `./out` |
+| `logging` | `level` | Log level (`debug`, `info`, `warn`, `error`) | `info` |
+| `concurrency` | `repo_workers` | Number of concurrent workers | `8` |
+
+## Usage
+
+### Basic Usage
+
+```bash
+# Using config file
+./analyzer analyze --config config.yaml
+
+# Using CLI flags
+./analyzer analyze \
+  --org my-org \
+  --since 2025-10-01T00:00:00Z \
+  --until 2025-10-31T23:59:59Z
+```
+
+### With Filters
+
+```bash
+./analyzer analyze \
+  --org my-org \
+  --since 2025-10-01T00:00:00Z \
+  --until 2025-10-31T23:59:59Z \
+  --exclude-author bot \
+  --exclude-author automated \
+  --exclude-title-prefix "WIP:" \
+  --exclude-title-prefix "DO NOT MERGE"
+```
+
+### Output Format
+
+```bash
+./analyzer analyze \
+  --org my-org \
+  --output-format json \
+  --output-dir ./results
+```
+
+### Dry Run
+
+```bash
+./analyzer analyze --org my-org --dry-run
+```
+
+### CLI Flags
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `--config` | Path to config file | `--config config.yaml` |
+| `--org` | GitHub organization name | `--org my-org` |
+| `--since` | Start time (RFC3339) | `--since 2025-10-01T00:00:00Z` |
+| `--until` | End time (RFC3339) | `--until 2025-10-31T23:59:59Z` |
+| `--exclude-author` | Exclude PRs by author (repeatable) | `--exclude-author bot` |
+| `--exclude-title-prefix` | Exclude PRs by title prefix (repeatable) | `--exclude-title-prefix "WIP:"` |
+| `--output-format` | Output format (`json`, `csv`) | `--output-format json` |
+| `--output-dir` | Output directory | `--output-dir ./out` |
+| `--dry-run` | Dry run mode (no API calls) | `--dry-run` |
+| `--skip-api-calls` | Use cache only (future feature) | `--skip-api-calls` |
+| `--invalidate-cache` | Invalidate cache (future feature) | `--invalidate-cache` |
+| `--log-level` | Log level (`debug`, `info`, `warn`, `error`) | `--log-level debug` |
+
+## Output
+
+The application generates two JSON files in the output directory:
+
+### `analysis_results.json`
+
+Aggregated metrics:
+
+```json
+{
+  "total_prs_closed": 150,
+  "prs_by_repo": {
+    "my-org/repo1": 45,
+    "my-org/repo2": 30,
+    "my-org/repo3": 75
+  },
+  "prs_by_team": {
+    "no_codeowners": 150
+  },
+  "prs_by_user": {
+    "alice": 50,
+    "bob": 40,
+    "charlie": 60
+  },
+  "time_window": {
+    "since": "2025-10-01T00:00:00Z",
+    "until": "2025-10-31T23:59:59Z"
+  },
+  "generated_at": "2025-11-01T10:00:00Z"
 }
+```
 
-func init() {
-    rootCmd.AddCommand(yourCmd)
+### `prs_by_repo.json`
+
+Detailed PR information grouped by repository:
+
+```json
+{
+  "my-org/repo1": [
+    {
+      "number": 123,
+      "title": "Add feature X",
+      "author": "alice",
+      "state": "closed",
+      "created_at": "2025-10-15T10:00:00Z",
+      "closed_at": "2025-10-16T14:30:00Z",
+      "url": "https://github.com/my-org/repo1/pull/123"
+    }
+  ]
 }
 ```
 
-### 3. Configure Logging
+## Examples
 
-The template uses Zap for logging. Configure it in `cmd/root.go`:
+### Analyze Last Month's PRs
 
-```go
-// Uncomment and customize configureLogger function
-logger = configureLogger(context.Background(), cfg)
+```bash
+./analyzer analyze \
+  --org my-org \
+  --since $(date -u -d '1 month ago' +%Y-%m-%dT00:00:00Z) \
+  --until $(date -u +%Y-%m-%dT23:59:59Z)
 ```
 
-### 4. Add Configuration
+### Exclude Bot PRs
 
-Create a configuration package and uncomment configuration loading in `cmd/root.go`:
-
-```go
-// Load configuration
-cfg = YourApp.NewDefaultConfig()
-if err := YourApp.Load(configFile, configEnv); err != nil {
-    panic(err)
-}
+```bash
+./analyzer analyze \
+  --org my-org \
+  --since 2025-10-01T00:00:00Z \
+  --until 2025-10-31T23:59:59Z \
+  --exclude-author dependabot \
+  --exclude-author renovate \
+  --exclude-author github-actions
 ```
 
-## Development Workflow
+### Debug Mode
 
-1. **Create a feature branch:**
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-
-2. **Make your changes** and run tests:
-   ```bash
-   make test
-   ```
-
-3. **Fix linting issues:**
-   ```bash
-   make lint
-   ```
-
-4. **Ensure security checks pass:**
-   ```bash
-   make vulncheck
-   ```
-
-5. **Commit and push:**
-   ```bash
-   git commit -m "feat: your feature description"
-   git push origin feature/your-feature
-   ```
-
-## Tools and Dependencies
-
-### Required Tools
-
-- **golangci-lint**: Code linting
-  ```bash
-  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-  ```
-
-- **govulncheck**: Go vulnerability checker
-  ```bash
-  go install golang.org/x/vuln/cmd/govulncheck@latest
-  ```
-
-- **trivy**: Security scanner
-  ```bash
-  # Install via package manager or download from: https://github.com/aquasecurity/trivy
-  ```
-
-### Key Dependencies
-
-- `github.com/spf13/cobra` - CLI framework
-- `go.uber.org/zap` - Structured logging
+```bash
+./analyzer analyze \
+  --org my-org \
+  --since 2025-10-01T00:00:00Z \
+  --until 2025-10-31T23:59:59Z \
+  --log-level debug
+```
 
 ## Troubleshooting
 
-### DevContainer Issues
+### Token Issues
 
-- **Container won't start**: Check that Docker is running and you have sufficient resources allocated
-- **Extensions not loading**: Ensure the container has finished building completely
-- **Go tools not found**: Run `go mod download` in the container terminal
+**Error**: `GitHub token not found in environment variable GITHUB_TOKEN`
 
-### Build Issues
+**Solution**: Ensure the token is set in your environment:
+```bash
+export GITHUB_TOKEN="your_token_here"
+```
 
-- **Module not found**: Run `make vendor` to download dependencies
-- **Lint errors**: Run `make lint` to see specific issues, then fix them
-- **Test failures**: Run `make unit-test` to see detailed test output
+**Error**: `401 Unauthorized`
 
-## Contributing
+**Solution**: 
+- Verify your token is valid and not expired
+- Ensure you have the correct scopes (`repo` for private repos, `public_repo` for public repos)
+- Check that you have access to the organization
 
-1. Fork the repository
-2. Create your feature branch
-3. Make your changes
-4. Run `make test` to ensure everything passes
-5. Submit a pull request
+### Rate Limiting
+
+**Error**: `403 rate limit exceeded`
+
+**Solution**: 
+- The application automatically handles rate limiting with exponential backoff
+- Reduce `qps` (queries per second) in your config
+- Configure `threshold` and `sleep_minutes` to proactively sleep when rate limit is low
+- Wait for the rate limit to reset (usually 1 hour)
+
+**Proactive Rate Limit Management**:
+You can configure the application to automatically sleep when the rate limit remaining reaches a threshold. For example:
+```yaml
+rate_limiter:
+  threshold: 3000      # Sleep when remaining requests <= 3000
+  sleep_minutes: 60    # Sleep for 60 minutes
+```
+
+This helps prevent hitting the rate limit by pausing operations when the remaining requests are low.
+
+### Organization Access
+
+**Error**: `404 Not Found` when listing repositories
+
+**Solution**:
+- Verify you have access to the organization
+- Ensure your token has `read:org` scope for private organizations
+- Check that the organization name is correct
+
+### Time Format
+
+**Error**: `invalid time_window.since format (must be RFC3339)`
+
+**Solution**: Use RFC3339 format:
+```bash
+--since 2025-10-01T00:00:00Z
+--until 2025-10-31T23:59:59Z
+```
+
+## Development
+
+### Running Tests
+
+```bash
+go test ./...
+```
+
+### Building
+
+```bash
+go build -o analyzer ./main.go
+```
+
+### Linting
+
+```bash
+golangci-lint run
+```
+
+## Roadmap
+
+- [ ] CODEOWNERS parsing and mapping
+- [ ] Team attribution modes (multi, primary, first-owner-only)
+- [ ] CSV output format
+- [ ] SQLite/JSON caching layer
+- [ ] Cache-only mode
+- [ ] Cache invalidation
+- [ ] Per-repo CSV export
 
 ## License
 
-MIT License - see LICENSE file for details
+See [LICENSE](LICENSE) file for details.
 
-## Support
+## Contributing
 
-[Add support information or links here]
+Contributions are welcome! Please open an issue or submit a pull request.
 
