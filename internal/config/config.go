@@ -20,6 +20,7 @@ type Config struct {
 	Output       OutputConfig       `mapstructure:"output"`
 	Logging      LoggingConfig      `mapstructure:"logging"`
 	Concurrency  ConcurrencyConfig  `mapstructure:"concurrency"`
+	TeamRollup   []TeamRollupConfig `mapstructure:"team_rollup"`
 }
 
 // GitHubConfig holds GitHub API configuration
@@ -83,6 +84,12 @@ type LoggingConfig struct {
 // ConcurrencyConfig holds concurrency configuration
 type ConcurrencyConfig struct {
 	RepoWorkers int `mapstructure:"repo_workers"`
+}
+
+// TeamRollupConfig holds team rollup configuration
+type TeamRollupConfig struct {
+	Name  string   `mapstructure:"name"`
+	Teams []string `mapstructure:"teams"`
 }
 
 // LoadConfig loads configuration from file and environment

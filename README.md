@@ -6,6 +6,8 @@ A local, idiomatic Go application that programmatically analyzes **closed pull r
 
 - ✅ **Repository Enumeration**: Lists all repositories in a GitHub organization
 - ✅ **PR Analysis**: Analyzes closed PRs within a configurable time window
+- ✅ **CODEOWNERS Support**: Parses CODEOWNERS files and attributes PRs to teams
+- ✅ **Team Rollup**: Roll up multiple GitHub teams under named rollup teams
 - ✅ **Filtering**: Exclude PRs by author or title prefix
 - ✅ **Rate Limiting**: Respectful GitHub API rate limiting with token bucket algorithm
 - ✅ **Concurrent Processing**: Parallel repository processing with configurable worker pool
@@ -125,6 +127,17 @@ filters:
     - "DO NOT MERGE"
 attribution:
   mode: "multi"   # "multi" | "primary" | "first-owner-only"
+team_rollup:
+  - name: my rollup team
+    teams:
+      - team_1
+      - team_2
+      - team_3
+  - name: my other rollup
+    teams:
+      - team_3
+      - team_4
+      - team_5
 cache:
   backend: "sqlite"
   sqlite_path: "./cache.db"
@@ -159,6 +172,9 @@ concurrency:
 | `filters` | `exclude_authors` | List of author usernames to exclude | `[]` |
 | `filters` | `exclude_title_prefixes` | List of title prefixes to exclude | `[]` |
 | `attribution` | `mode` | Attribution mode | `multi` |
+| `team_rollup` | - | List of team rollup configurations | `[]` |
+| `team_rollup[].name` | - | Name of the rollup team | Required |
+| `team_rollup[].teams` | - | List of team names to roll up | Required |
 | `rate_limiter` | `qps` | Queries per second | `2` |
 | `rate_limiter` | `burst` | Burst size | `20` |
 | `rate_limiter` | `threshold` | Rate limit threshold to trigger sleep (0 = disabled) | `0` |
@@ -227,6 +243,45 @@ concurrency:
 | `--skip-api-calls` | Use cache only (future feature) | `--skip-api-calls` |
 | `--invalidate-cache` | Invalidate cache (future feature) | `--invalidate-cache` |
 | `--log-level` | Log level (`debug`, `info`, `warn`, `error`) | `--log-level debug` |
+
+## Team Rollup
+
+The application supports rolling up multiple GitHub teams under named rollup teams. This is useful for aggregating statistics across related teams.
+
+### Configuration
+
+Configure team rollups in your `config.yaml`:
+
+```yaml
+team_rollup:
+  - name: my rollup team
+    teams:
+      - team_1
+      - team_2
+      - team_3
+  - name: my other rollup
+    teams:
+      - team_3
+      - team_4
+      - team_5
+```
+
+### How It Works
+
+- When a PR is attributed to a team that is part of a rollup (e.g., `team_1`), it is counted **only** under the rollup team name (e.g., `my rollup team`)
+- Teams that are **not** part of any rollup are counted under their individual team name
+- A team can be part of multiple rollups (counted under all rollup teams it belongs to)
+- **Each PR is counted only once per rollup team**, even if multiple teams within that rollup are attributed to the PR
+- Team names are normalized (the `@` prefix is removed if present)
+- Rollup team names appear in the `prs_by_team` output instead of individual team names for teams in rollups
+
+### Example
+
+If a PR is attributed to `team_1`, `team_2`, and `team_3`, and you have a rollup configured as above:
+- All three teams are in the rollup, so the PR is counted **once** under `my rollup team` (not three times)
+- The PR is **not** counted under `team_1`, `team_2`, or `team_3` individually
+- If the PR is also attributed to `team_6` (not in any rollup), it is counted under `team_6`
+- This provides clean aggregated statistics without double-counting
 
 ## Output
 

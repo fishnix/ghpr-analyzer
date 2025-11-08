@@ -15,6 +15,7 @@
 - Support filters:
   - Exclude PRs opened by specific user(s) (support multiple).
   - Exclude PRs whose title **starts with** one or more configured strings (support multiple).
+- Support rolling up multiple Github teams up under a named team defined in the config file
 - CLI + configuration file for parameters.
 - Output results in machine-friendly formats (JSON, CSV) and human summary.
 
@@ -104,6 +105,17 @@ logging:
   level: "info"
 concurrency:
   repo_workers: 8
+team_rollup:
+  - name: my rollup team
+    teams:
+      - team_1
+      - team_2
+      - team_3
+  - name: my other rollup
+    teams:
+      - team_3
+      - team_4
+      - team_5
 ```
 
 ### CLI flags (examples)
