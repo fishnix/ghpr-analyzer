@@ -11,9 +11,8 @@ scan:
     - vendor
     - dist
     - build
-    - .git
-    - .github
     - .vscode
     - .idea
     - .DS_Store
-    - .devcontainer
+  skip-files:
+    - .devcontainer/.env.secret
