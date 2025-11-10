@@ -79,14 +79,26 @@ func (a *Analyzer) Analyze(ctx context.Context) error {
 		return fmt.Errorf("failed to get time window: %w", err)
 	}
 
+	a.logger.Info("Time window",
+		zap.String("since", since.Format(time.RFC3339)),
+		zap.String("until", until.Format(time.RFC3339)),
+	)
+
 	// Enumerate repositories (check cache first)
 	var repos []*github.Repository
 	if a.cache != nil {
+		a.logger.Debug("Cache is configured, checking for cached repositories")
+
 		cachedRepos, err := a.cache.GetRepos(ctx, a.cfg.GitHub.Org)
 		if err == nil && len(cachedRepos) > 0 {
 			a.logger.Info("Using cached repositories", zap.Int("count", len(cachedRepos)))
 			repos = cachedRepos
 		}
+	}
+
+	a.logger.Info("Repositories", zap.Int("count", len(repos)))
+	if len(repos) == 0 {
+		return fmt.Errorf("no repositories found")
 	}
 
 	// Fetch from API if not cached or cache-only mode

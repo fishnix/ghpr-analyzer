@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/google/go-github/v62/github"
-	_ "modernc.org/sqlite"
 	"go.uber.org/zap"
+	_ "modernc.org/sqlite"
 )
 
 // SQLiteCache implements cache using SQLite
@@ -88,12 +88,15 @@ func (c *SQLiteCache) GetRepos(ctx context.Context, org string) ([]*github.Repos
 	var data []byte
 	var timestamp time.Time
 
+	c.logger.Debug("Getting cached repositories", zap.String("org", org))
+
 	err := c.db.QueryRowContext(ctx,
 		"SELECT data, timestamp FROM repos WHERE org = ?",
 		org,
 	).Scan(&data, &timestamp)
 
 	if err == sql.ErrNoRows {
+		c.logger.Debug("Cache entry not found", zap.String("org", org))
 		return nil, fmt.Errorf("cache entry not found")
 	}
 	if err != nil {
@@ -103,12 +106,14 @@ func (c *SQLiteCache) GetRepos(ctx context.Context, org string) ([]*github.Repos
 	// Check expiration
 	entry := CacheEntry{Timestamp: timestamp}
 	if entry.IsExpired(c.ttl) {
+		c.logger.Debug("Cache entry expired", zap.String("org", org))
 		return nil, fmt.Errorf("cache entry expired")
 	}
 
 	// Unmarshal
 	var repos []*github.Repository
 	if err := json.Unmarshal(data, &repos); err != nil {
+		c.logger.Debug("Failed to unmarshal data", zap.String("org", org), zap.Error(err))
 		return nil, fmt.Errorf("failed to unmarshal data: %w", err)
 	}
 
@@ -310,4 +315,3 @@ func (c *SQLiteCache) InvalidateRepo(ctx context.Context, owner, repo string) er
 func (c *SQLiteCache) Close() error {
 	return c.db.Close()
 }
-
