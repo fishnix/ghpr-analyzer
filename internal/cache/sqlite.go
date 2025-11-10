@@ -14,22 +14,24 @@ import (
 
 // SQLiteCache implements cache using SQLite
 type SQLiteCache struct {
-	db     *sql.DB
-	logger *zap.Logger
-	ttl    time.Duration
+	db        *sql.DB
+	logger    *zap.Logger
+	ttl       time.Duration
+	ignoreTTL bool
 }
 
 // NewSQLiteCache creates a new SQLite cache
-func NewSQLiteCache(dbPath string, logger *zap.Logger) (*SQLiteCache, error) {
+func NewSQLiteCache(dbPath string, ttl time.Duration, ignoreTTL bool, logger *zap.Logger) (*SQLiteCache, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	cache := &SQLiteCache{
-		db:     db,
-		logger: logger,
-		ttl:    24 * time.Hour, // Default TTL
+		db:        db,
+		logger:    logger,
+		ttl:       ttl,
+		ignoreTTL: ignoreTTL,
 	}
 
 	// Initialize schema
@@ -103,11 +105,13 @@ func (c *SQLiteCache) GetRepos(ctx context.Context, org string) ([]*github.Repos
 		return nil, fmt.Errorf("failed to query cache: %w", err)
 	}
 
-	// Check expiration
-	entry := CacheEntry{Timestamp: timestamp}
-	if entry.IsExpired(c.ttl) {
-		c.logger.Debug("Cache entry expired", zap.String("org", org))
-		return nil, fmt.Errorf("cache entry expired")
+	// Check expiration (unless ignoreTTL is set)
+	if !c.ignoreTTL {
+		entry := CacheEntry{Timestamp: timestamp}
+		if entry.IsExpired(c.ttl) {
+			c.logger.Debug("Cache entry expired", zap.String("org", org))
+			return nil, fmt.Errorf("cache entry expired")
+		}
 	}
 
 	// Unmarshal
@@ -152,10 +156,12 @@ func (c *SQLiteCache) GetCODEOWNERS(ctx context.Context, owner, repo string) ([]
 		return nil, fmt.Errorf("failed to query cache: %w", err)
 	}
 
-	// Check expiration
-	entry := CacheEntry{Timestamp: timestamp}
-	if entry.IsExpired(c.ttl) {
-		return nil, fmt.Errorf("cache entry expired")
+	// Check expiration (unless ignoreTTL is set)
+	if !c.ignoreTTL {
+		entry := CacheEntry{Timestamp: timestamp}
+		if entry.IsExpired(c.ttl) {
+			return nil, fmt.Errorf("cache entry expired")
+		}
 	}
 
 	return data, nil
@@ -191,10 +197,12 @@ func (c *SQLiteCache) GetPRs(ctx context.Context, owner, repo string, since, unt
 		return nil, fmt.Errorf("failed to query cache: %w", err)
 	}
 
-	// Check expiration
-	entry := CacheEntry{Timestamp: timestamp}
-	if entry.IsExpired(c.ttl) {
-		return nil, fmt.Errorf("cache entry expired")
+	// Check expiration (unless ignoreTTL is set)
+	if !c.ignoreTTL {
+		entry := CacheEntry{Timestamp: timestamp}
+		if entry.IsExpired(c.ttl) {
+			return nil, fmt.Errorf("cache entry expired")
+		}
 	}
 
 	// Unmarshal
@@ -241,10 +249,12 @@ func (c *SQLiteCache) GetPRFiles(ctx context.Context, owner, repo string, prNumb
 		return nil, fmt.Errorf("failed to query cache: %w", err)
 	}
 
-	// Check expiration
-	entry := CacheEntry{Timestamp: timestamp}
-	if entry.IsExpired(c.ttl) {
-		return nil, fmt.Errorf("cache entry expired")
+	// Check expiration (unless ignoreTTL is set)
+	if !c.ignoreTTL {
+		entry := CacheEntry{Timestamp: timestamp}
+		if entry.IsExpired(c.ttl) {
+			return nil, fmt.Errorf("cache entry expired")
+		}
 	}
 
 	// Unmarshal

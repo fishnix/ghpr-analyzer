@@ -14,21 +14,23 @@ import (
 
 // JSONCache implements cache using JSON files
 type JSONCache struct {
-	baseDir string
-	logger  *zap.Logger
-	ttl     time.Duration
+	baseDir   string
+	logger    *zap.Logger
+	ttl       time.Duration
+	ignoreTTL bool
 }
 
 // NewJSONCache creates a new JSON file cache
-func NewJSONCache(baseDir string, logger *zap.Logger) (*JSONCache, error) {
+func NewJSONCache(baseDir string, ttl time.Duration, ignoreTTL bool, logger *zap.Logger) (*JSONCache, error) {
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create cache directory: %w", err)
 	}
 
 	return &JSONCache{
-		baseDir: baseDir,
-		logger:  logger,
-		ttl:     24 * time.Hour, // Default TTL
+		baseDir:   baseDir,
+		logger:    logger,
+		ttl:       ttl,
+		ignoreTTL: ignoreTTL,
 	}, nil
 }
 
@@ -138,10 +140,12 @@ func (c *JSONCache) getJSON(path string, result interface{}) error {
 		return fmt.Errorf("failed to unmarshal cache entry: %w", err)
 	}
 
-	// Check expiration
-	if entry.IsExpired(c.ttl) {
-		c.logger.Debug("Cache entry expired", zap.String("path", path))
-		return fmt.Errorf("cache entry expired")
+	// Check expiration (unless ignoreTTL is set)
+	if !c.ignoreTTL {
+		if entry.IsExpired(c.ttl) {
+			c.logger.Debug("Cache entry expired", zap.String("path", path))
+			return fmt.Errorf("cache entry expired")
+		}
 	}
 
 	// Unmarshal data

@@ -41,12 +41,12 @@ type Cache interface {
 }
 
 // NewCache creates a new cache instance based on backend type
-func NewCache(backend, sqlitePath, jsonDir string, logger *zap.Logger) (Cache, error) {
+func NewCache(backend, sqlitePath, jsonDir string, ttl time.Duration, ignoreTTL bool, logger *zap.Logger) (Cache, error) {
 	switch backend {
 	case "sqlite":
-		return NewSQLiteCache(sqlitePath, logger)
+		return NewSQLiteCache(sqlitePath, ttl, ignoreTTL, logger)
 	case "json":
-		return NewJSONCache(jsonDir, logger)
+		return NewJSONCache(jsonDir, ttl, ignoreTTL, logger)
 	default:
 		return nil, fmt.Errorf("unsupported cache backend: %s", backend)
 	}

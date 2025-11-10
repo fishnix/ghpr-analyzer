@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fishnix/ghpr-analyzer/internal/analyzer"
 	"github.com/fishnix/ghpr-analyzer/internal/cache"
@@ -24,6 +25,7 @@ var (
 	outputDirFlag        string
 	skipAPICallsFlag     bool
 	invalidateCacheFlag  bool
+	ignoreTTLFlag        bool
 	dryRunFlag           bool
 )
 
@@ -53,6 +55,7 @@ func init() {
 	analyzeCmd.Flags().StringVar(&outputDirFlag, "output-dir", "", "Output directory")
 	analyzeCmd.Flags().BoolVar(&skipAPICallsFlag, "skip-api-calls", false, "Skip API calls and use cache only")
 	analyzeCmd.Flags().BoolVar(&invalidateCacheFlag, "invalidate-cache", false, "Invalidate cache before analysis")
+	analyzeCmd.Flags().BoolVar(&ignoreTTLFlag, "ignore-ttl", false, "Ignore TTL and use cache data regardless of age")
 	analyzeCmd.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run mode (don't make API calls)")
 
 	// Bind flags to viper
@@ -123,10 +126,18 @@ func analyze(cmdCtx context.Context) error {
 		if cfg.Cache.Backend == "" {
 			return fmt.Errorf("cache backend not configured, cannot invalidate")
 		}
+		// Convert TTL from minutes to duration
+		ttl := time.Duration(cfg.Cache.TTLMinutes) * time.Minute
+		if ttl == 0 {
+			// Default to 24 hours if not set
+			ttl = 24 * time.Hour
+		}
 		cacheInstance, err := cache.NewCache(
 			cfg.Cache.Backend,
 			cfg.Cache.SQLitePath,
 			cfg.Cache.JSONDir,
+			ttl,
+			false, // ignoreTTL not needed for invalidation
 			logger,
 		)
 		if err != nil {
@@ -141,8 +152,13 @@ func analyze(cmdCtx context.Context) error {
 		return nil
 	}
 
+	// Warn if using --skip-api-calls without --ignore-ttl
+	if skipAPICallsFlag && !ignoreTTLFlag {
+		logger.Warn("Using --skip-api-calls: data will not be refreshed. If cache entries are expired, use --ignore-ttl to use cached data regardless of age")
+	}
+
 	// Create analyzer
-	analyzer, err := analyzer.NewAnalyzer(cfg, ghClient, skipAPICallsFlag, logger)
+	analyzer, err := analyzer.NewAnalyzer(cfg, ghClient, skipAPICallsFlag, ignoreTTLFlag, logger)
 	if err != nil {
 		return fmt.Errorf("failed to create analyzer: %w", err)
 	}

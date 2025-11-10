@@ -30,7 +30,7 @@ type Analyzer struct {
 }
 
 // NewAnalyzer creates a new analyzer
-func NewAnalyzer(cfg *config.Config, ghClient *ghclient.Client, skipAPICalls bool, logger *zap.Logger) (*Analyzer, error) {
+func NewAnalyzer(cfg *config.Config, ghClient *ghclient.Client, skipAPICalls bool, ignoreTTL bool, logger *zap.Logger) (*Analyzer, error) {
 	client := ghClient.GetClient()
 
 	repoEnum := fetcher.NewRepoEnumerator(client, ghClient, cfg.GitHub.Org, logger)
@@ -43,10 +43,19 @@ func NewAnalyzer(cfg *config.Config, ghClient *ghclient.Client, skipAPICalls boo
 	var cacheInstance cache.Cache
 	var err error
 	if cfg.Cache.Backend != "" {
+		// Convert TTL from minutes to duration
+		ttl := time.Duration(cfg.Cache.TTLMinutes) * time.Minute
+		if ttl == 0 {
+			// Default to 24 hours if not set
+			ttl = 24 * time.Hour
+		}
+
 		cacheInstance, err = cache.NewCache(
 			cfg.Cache.Backend,
 			cfg.Cache.SQLitePath,
 			cfg.Cache.JSONDir,
+			ttl,
+			ignoreTTL,
 			logger,
 		)
 		if err != nil {
