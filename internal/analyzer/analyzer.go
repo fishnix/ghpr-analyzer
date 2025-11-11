@@ -30,7 +30,7 @@ type Analyzer struct {
 }
 
 // NewAnalyzer creates a new analyzer
-func NewAnalyzer(cfg *config.Config, ghClient *ghclient.Client, skipAPICalls bool, logger *zap.Logger) (*Analyzer, error) {
+func NewAnalyzer(cfg *config.Config, ghClient *ghclient.Client, skipAPICalls bool, ignoreTTL bool, logger *zap.Logger) (*Analyzer, error) {
 	client := ghClient.GetClient()
 
 	repoEnum := fetcher.NewRepoEnumerator(client, ghClient, cfg.GitHub.Org, logger)
@@ -43,10 +43,19 @@ func NewAnalyzer(cfg *config.Config, ghClient *ghclient.Client, skipAPICalls boo
 	var cacheInstance cache.Cache
 	var err error
 	if cfg.Cache.Backend != "" {
+		// Convert TTL from minutes to duration
+		ttl := time.Duration(cfg.Cache.TTLMinutes) * time.Minute
+		if ttl == 0 {
+			// Default to 24 hours if not set
+			ttl = 24 * time.Hour
+		}
+
 		cacheInstance, err = cache.NewCache(
 			cfg.Cache.Backend,
 			cfg.Cache.SQLitePath,
 			cfg.Cache.JSONDir,
+			ttl,
+			ignoreTTL,
 			logger,
 		)
 		if err != nil {
@@ -79,14 +88,26 @@ func (a *Analyzer) Analyze(ctx context.Context) error {
 		return fmt.Errorf("failed to get time window: %w", err)
 	}
 
+	a.logger.Info("Time window",
+		zap.String("since", since.Format(time.RFC3339)),
+		zap.String("until", until.Format(time.RFC3339)),
+	)
+
 	// Enumerate repositories (check cache first)
 	var repos []*github.Repository
 	if a.cache != nil {
+		a.logger.Debug("Cache is configured, checking for cached repositories")
+
 		cachedRepos, err := a.cache.GetRepos(ctx, a.cfg.GitHub.Org)
 		if err == nil && len(cachedRepos) > 0 {
 			a.logger.Info("Using cached repositories", zap.Int("count", len(cachedRepos)))
 			repos = cachedRepos
 		}
+	}
+
+	a.logger.Info("Repositories", zap.Int("count", len(repos)))
+	if len(repos) == 0 {
+		return fmt.Errorf("no repositories found")
 	}
 
 	// Fetch from API if not cached or cache-only mode
@@ -318,7 +339,7 @@ func (a *Analyzer) processRepo(ctx context.Context, repo *github.Repository, sin
 
 		// Cache PRs
 		if a.cache != nil {
-			if err := a.cache.SetPRs(ctx, owner, name, since, until, prs); err != nil {
+			if err := a.cache.SetPRs(ctx, owner, name, prs); err != nil {
 				a.logger.Warn("Failed to cache PRs", zap.Error(err))
 			}
 		}

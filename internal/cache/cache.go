@@ -21,10 +21,10 @@ type Cache interface {
 	// SetCODEOWNERS caches CODEOWNERS file
 	SetCODEOWNERS(ctx context.Context, owner, repo string, content []byte) error
 
-	// GetPRs retrieves cached PRs for a repository
+	// GetPRs retrieves cached PRs for a repository, filtered by time window
 	GetPRs(ctx context.Context, owner, repo string, since, until time.Time) ([]*github.PullRequest, error)
-	// SetPRs caches PRs for a repository
-	SetPRs(ctx context.Context, owner, repo string, since, until time.Time, prs []*github.PullRequest) error
+	// SetPRs caches PRs for a repository (stores individual PRs by ID)
+	SetPRs(ctx context.Context, owner, repo string, prs []*github.PullRequest) error
 
 	// GetPRFiles retrieves cached PR files
 	GetPRFiles(ctx context.Context, owner, repo string, prNumber int) ([]*github.CommitFile, error)
@@ -41,12 +41,12 @@ type Cache interface {
 }
 
 // NewCache creates a new cache instance based on backend type
-func NewCache(backend, sqlitePath, jsonDir string, logger *zap.Logger) (Cache, error) {
+func NewCache(backend, sqlitePath, jsonDir string, ttl time.Duration, ignoreTTL bool, logger *zap.Logger) (Cache, error) {
 	switch backend {
 	case "sqlite":
-		return NewSQLiteCache(sqlitePath, logger)
+		return NewSQLiteCache(sqlitePath, ttl, ignoreTTL, logger)
 	case "json":
-		return NewJSONCache(jsonDir, logger)
+		return NewJSONCache(jsonDir, ttl, ignoreTTL, logger)
 	default:
 		return nil, fmt.Errorf("unsupported cache backend: %s", backend)
 	}
