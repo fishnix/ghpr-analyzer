@@ -21,10 +21,10 @@ type Cache interface {
 	// SetCODEOWNERS caches CODEOWNERS file
 	SetCODEOWNERS(ctx context.Context, owner, repo string, content []byte) error
 
-	// GetPRs retrieves cached PRs for a repository
+	// GetPRs retrieves cached PRs for a repository, filtered by time window
 	GetPRs(ctx context.Context, owner, repo string, since, until time.Time) ([]*github.PullRequest, error)
-	// SetPRs caches PRs for a repository
-	SetPRs(ctx context.Context, owner, repo string, since, until time.Time, prs []*github.PullRequest) error
+	// SetPRs caches PRs for a repository (stores individual PRs by ID)
+	SetPRs(ctx context.Context, owner, repo string, prs []*github.PullRequest) error
 
 	// GetPRFiles retrieves cached PR files
 	GetPRFiles(ctx context.Context, owner, repo string, prNumber int) ([]*github.CommitFile, error)

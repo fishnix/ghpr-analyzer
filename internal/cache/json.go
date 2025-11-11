@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v62/github"
@@ -68,24 +69,86 @@ func (c *JSONCache) SetCODEOWNERS(ctx context.Context, owner, repo string, conte
 	return c.setJSON(path, content)
 }
 
-// GetPRs retrieves cached PRs for a repository
+// GetPRs retrieves cached PRs for a repository, filtered by time window
 func (c *JSONCache) GetPRs(ctx context.Context, owner, repo string, since, until time.Time) ([]*github.PullRequest, error) {
-	// Create a cache key based on time window
-	key := fmt.Sprintf("prs_%s_%s.json", since.Format("20060102"), until.Format("20060102"))
-	path := filepath.Join(c.baseDir, "repos", owner, repo, key)
-	var prs []*github.PullRequest
-	err := c.getJSON(path, &prs)
-	if err != nil {
-		return nil, err
+	// Read all PR files for this repo
+	prsDir := filepath.Join(c.baseDir, "repos", owner, repo, "prs")
+	
+	// Check if directory exists
+	if _, err := os.Stat(prsDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("cache entry not found")
 	}
-	return prs, nil
+
+	// Read all PR files
+	entries, err := os.ReadDir(prsDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read PRs directory: %w", err)
+	}
+
+	var allPRs []*github.PullRequest
+	var hasExpiredEntries bool
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+
+		// Skip old format files (with date range in name like prs_20250101_20250131.json)
+		if strings.HasPrefix(entry.Name(), "prs_") && strings.Count(entry.Name(), "_") >= 2 {
+			continue
+		}
+
+		path := filepath.Join(prsDir, entry.Name())
+		var pr github.PullRequest
+		err := c.getJSON(path, &pr)
+		if err != nil {
+			// Check if it's expired
+			if strings.Contains(err.Error(), "expired") {
+				hasExpiredEntries = true
+			}
+			continue
+		}
+
+		// Filter by time window
+		if pr.ClosedAt != nil {
+			closedAtTime := pr.ClosedAt.Time
+			if !closedAtTime.Before(since) && !closedAtTime.After(until) {
+				allPRs = append(allPRs, &pr)
+			}
+		}
+	}
+
+	if len(allPRs) == 0 && hasExpiredEntries {
+		return nil, fmt.Errorf("cache entry expired")
+	}
+
+	if len(allPRs) == 0 {
+		return nil, fmt.Errorf("cache entry not found")
+	}
+
+	return allPRs, nil
 }
 
-// SetPRs caches PRs for a repository
-func (c *JSONCache) SetPRs(ctx context.Context, owner, repo string, since, until time.Time, prs []*github.PullRequest) error {
-	key := fmt.Sprintf("prs_%s_%s.json", since.Format("20060102"), until.Format("20060102"))
-	path := filepath.Join(c.baseDir, "repos", owner, repo, key)
-	return c.setJSON(path, prs)
+// SetPRs caches PRs for a repository (stores individual PRs by ID)
+func (c *JSONCache) SetPRs(ctx context.Context, owner, repo string, prs []*github.PullRequest) error {
+	prsDir := filepath.Join(c.baseDir, "repos", owner, repo, "prs")
+	if err := os.MkdirAll(prsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create PRs directory: %w", err)
+	}
+
+	for _, pr := range prs {
+		if pr.Number == nil {
+			continue
+		}
+
+		path := filepath.Join(prsDir, fmt.Sprintf("%d.json", *pr.Number))
+		if err := c.setJSON(path, pr); err != nil {
+			c.logger.Warn("Failed to cache PR", zap.Int("pr_number", *pr.Number), zap.Error(err))
+			continue
+		}
+	}
+
+	return nil
 }
 
 // GetPRFiles retrieves cached PR files

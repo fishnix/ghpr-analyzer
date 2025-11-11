@@ -45,6 +45,11 @@ func NewJSONExporter(outputDir string, logger *zap.Logger) *JSONExporter {
 func (e *JSONExporter) Export(result *AnalysisResult) error {
 	e.logger.Info("Exporting results to JSON", zap.String("output_dir", e.outputDir))
 
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(e.outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
 	// Create output file path
 	outputPath := filepath.Join(e.outputDir, "analysis_results.json")
 
@@ -77,6 +82,11 @@ type RepoPR struct {
 // ExportPerRepo exports PRs grouped by repository
 func (e *JSONExporter) ExportPerRepo(repoPRs map[string][]*github.PullRequest) error {
 	e.logger.Info("Exporting per-repo PRs to JSON")
+
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(e.outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
 
 	// Convert to exportable format
 	exportData := make(map[string][]RepoPR)

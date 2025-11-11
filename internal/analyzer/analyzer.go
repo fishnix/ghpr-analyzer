@@ -339,7 +339,7 @@ func (a *Analyzer) processRepo(ctx context.Context, repo *github.Repository, sin
 
 		// Cache PRs
 		if a.cache != nil {
-			if err := a.cache.SetPRs(ctx, owner, name, since, until, prs); err != nil {
+			if err := a.cache.SetPRs(ctx, owner, name, prs); err != nil {
 				a.logger.Warn("Failed to cache PRs", zap.Error(err))
 			}
 		}

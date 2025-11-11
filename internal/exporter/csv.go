@@ -30,6 +30,11 @@ func NewCSVExporter(outputDir string, logger *zap.Logger) *CSVExporter {
 func (e *CSVExporter) Export(result *AnalysisResult) error {
 	e.logger.Info("Exporting results to CSV", zap.String("output_dir", e.outputDir))
 
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(e.outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %w", err)
+	}
+
 	// Export aggregated results
 	if err := e.exportAggregated(result); err != nil {
 		return fmt.Errorf("failed to export aggregated results: %w", err)
